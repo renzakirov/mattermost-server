@@ -42,6 +42,10 @@ type Store interface {
 	Team() TeamStore
 	Channel() ChannelStore
 	Post() PostStore
+
+	// DOGEZER RZ:
+	PostUnread() PostUnreadStore
+
 	User() UserStore
 	Audit() AuditStore
 	ClusterDiscovery() ClusterDiscoveryStore
@@ -156,7 +160,10 @@ type ChannelStore interface {
 	RemoveMember(channelId string, userId string) StoreChannel
 	PermanentDeleteMembersByUser(userId string) StoreChannel
 	PermanentDeleteMembersByChannel(channelId string) StoreChannel
-	UpdateLastViewedAt(channelIds []string, userId string) StoreChannel
+
+	// DOGEZER RZ:
+	UpdateLastViewedAt(channelIds []string, lastViewedAt []*int64, userId string) StoreChannel
+
 	IncrementMentionCount(channelId string, userId string) StoreChannel
 	AnalyticsTypeCount(teamId string, channelType string) StoreChannel
 	GetMembersForUser(teamId string, userId string) StoreChannel
@@ -171,6 +178,8 @@ type ChannelStore interface {
 	MigrateChannelMembers(fromChannelId string, fromUserId string) StoreChannel
 	ResetAllChannelSchemes() StoreChannel
 	ClearAllCustomRoleAssignments() StoreChannel
+	// DOGEZER RZ:
+	GetAllChannelsUnreads(userId string) StoreChannel
 }
 
 type ChannelMemberHistoryStore interface {
@@ -209,6 +218,11 @@ type PostStore interface {
 	PermanentDeleteBatch(endTime int64, limit int64) StoreChannel
 	GetOldest() StoreChannel
 	GetMaxPostSize() StoreChannel
+}
+
+// DOGEZER RZ:
+type PostUnreadStore interface {
+	View(unread *model.PostUnread) StoreChannel
 }
 
 type UserStore interface {

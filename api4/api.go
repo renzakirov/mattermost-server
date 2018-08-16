@@ -32,9 +32,13 @@ type Routes struct {
 	TeamMember         *mux.Router // 'api/v4/teams/{team_id:[A-Za-z0-9_-]+}/members/{user_id:[A-Za-z0-9_-]+}'
 	TeamMembersForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/teams/members'
 
-	Channels                 *mux.Router // 'api/v4/channels'
-	Channel                  *mux.Router // 'api/v4/channels/{channel_id:[A-Za-z0-9]+}'
-	ChannelForUser           *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/{channel_id:[A-Za-z0-9]+}'
+	Channels       *mux.Router // 'api/v4/channels'
+	Channel        *mux.Router // 'api/v4/channels/{channel_id:[A-Za-z0-9]+}'
+	ChannelForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/{channel_id:[A-Za-z0-9]+}'
+
+	// DOGEZER RZ:
+	UnreadsInChannelsForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/unreads'
+
 	ChannelByName            *mux.Router // 'api/v4/teams/{team_id:[A-Za-z0-9]+}/channels/name/{channel_name:[A-Za-z0-9_-]+}'
 	ChannelByNameForTeamName *mux.Router // 'api/v4/teams/name/{team_name:[A-Za-z0-9_-]+}/channels/name/{channel_name:[A-Za-z0-9_-]+}'
 	ChannelsForTeam          *mux.Router // 'api/v4/teams/{team_id:[A-Za-z0-9]+}/channels'
@@ -140,6 +144,10 @@ func Init(a *app.App, root *mux.Router) *API {
 	api.BaseRoutes.Channels = api.BaseRoutes.ApiRoot.PathPrefix("/channels").Subrouter()
 	api.BaseRoutes.Channel = api.BaseRoutes.Channels.PathPrefix("/{channel_id:[A-Za-z0-9]+}").Subrouter()
 	api.BaseRoutes.ChannelForUser = api.BaseRoutes.User.PathPrefix("/channels/{channel_id:[A-Za-z0-9]+}").Subrouter()
+
+	// DOGEZER RZ:
+	api.BaseRoutes.UnreadsInChannelsForUser = api.BaseRoutes.User.PathPrefix("/channels/unreads").Subrouter()
+
 	api.BaseRoutes.ChannelByName = api.BaseRoutes.Team.PathPrefix("/channels/name/{channel_name:[A-Za-z0-9_-]+}").Subrouter()
 	api.BaseRoutes.ChannelByNameForTeamName = api.BaseRoutes.TeamByName.PathPrefix("/channels/name/{channel_name:[A-Za-z0-9_-]+}").Subrouter()
 	api.BaseRoutes.ChannelsForTeam = api.BaseRoutes.Team.PathPrefix("/channels").Subrouter()

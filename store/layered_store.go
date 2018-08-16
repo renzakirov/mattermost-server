@@ -81,6 +81,11 @@ func (s *LayeredStore) Post() PostStore {
 	return s.DatabaseLayer.Post()
 }
 
+// DOGEZER RZ:
+func (s *LayeredStore) PostUnread() PostUnreadStore {
+	return s.DatabaseLayer.PostUnread()
+}
+
 func (s *LayeredStore) User() UserStore {
 	return s.DatabaseLayer.User()
 }

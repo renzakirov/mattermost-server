@@ -14,6 +14,7 @@ const (
 	WEBSOCKET_EVENT_POSTED                  = "posted"
 	WEBSOCKET_EVENT_POST_EDITED             = "post_edited"
 	WEBSOCKET_EVENT_POST_DELETED            = "post_deleted"
+	WEBSOCKET_EVENT_THREAD_VIEW             = "thread_view"
 	WEBSOCKET_EVENT_CHANNEL_CONVERTED       = "channel_converted"
 	WEBSOCKET_EVENT_CHANNEL_CREATED         = "channel_created"
 	WEBSOCKET_EVENT_CHANNEL_DELETED         = "channel_deleted"

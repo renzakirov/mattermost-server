@@ -492,6 +492,58 @@ func (s SqlChannelStore) Update(channel *model.Channel) store.StoreChannel {
 	})
 }
 
+// DOGEZER RZ:
+func (s SqlChannelStore) GetAllChannelsUnreads(userId string) store.StoreChannel {
+	return store.Do(func(result *store.StoreResult) {
+		// fmt.Println("---------- in store getAllChannelsUnreads -> userId = ", userId)
+		// var unreadsChannels model.ChannelsUnreads
+		var data model.ChannelsUnreads
+		params := map[string]interface{}{"UserId": userId}
+		_, err := s.GetReplica().Select(&data.Channels,
+			`SELECT
+				c.teamid TeamId,
+				CM.ChannelId ChannelId, 
+				(c.TotalMsgCount - cm.MsgCount) MsgCount, 
+				cm.MentionCount MentionCount, 
+				cm.LastViewedAt LastViewedAt
+			FROM Channels as C join ChannelMembers as CM 
+			on CM.channelid = c.id and cm.userid= :UserId
+			WHERE
+				UserId = :UserId
+				AND DeleteAt = 0
+			`,
+			params)
+		// GetChannelUnread
+		if err != nil {
+			result.Err = model.NewAppError("SqlChannelStore.GetChannelUnread", "store.sql_channel.get_unread.app_error", nil, "all user channels "+err.Error(), http.StatusInternalServerError)
+			if err == sql.ErrNoRows {
+				result.Err.StatusCode = http.StatusNotFound
+			}
+		} else {
+			_, err = s.GetReplica().Select(&data.Threads,
+				`
+				select count(*),
+					p.rootid as RootId,
+					coalesce(min(u.lastpostat), 0) as LastViewedAt,
+					min(p.createat) as FirstUnreadAt,
+					max(p.createat) as LastPostAt,
+					count(*) as MsgCount
+				from postunreads as u
+				right join posts as p
+				on u.postid = p.rootid and
+					u.userid = :UserId
+				where
+					p.rootid != '' and
+					p.userid != :UserId and
+					(p.createat > u.lastpostat or u.lastpostat is null)
+				group by p.rootid
+			`, params)
+			fmt.Println("-- -> err = ", err)
+			result.Data = &data
+		}
+	})
+}
+
 func (s SqlChannelStore) GetChannelUnread(channelId, userId string) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
 		var unreadChannel model.ChannelUnread
@@ -513,6 +565,29 @@ func (s SqlChannelStore) GetChannelUnread(channelId, userId string) store.StoreC
 				result.Err.StatusCode = http.StatusNotFound
 			}
 		} else {
+			// DOGEZER RZ:
+			// Нужно кол-во постов после даты из PostUnreads
+			_, err = s.GetReplica().Select(&unreadChannel.ByThreads,
+				`
+				select count(*),
+					p.rootid as RootId,
+					coalesce(min(u.lastpostat), 0) as LastViewedAt,
+					min(p.createat) as FirstUnreadAt,
+					max(p.createat) as LastPostAt,
+					count(*) as MsgCount
+				from postunreads as u 
+				right join posts as p 
+				on u.postid = p.rootid and 
+					u.userid = :UserId
+				where 
+					p.rootid != '' and 
+					p.channelid = :ChannelId and 
+					p.userid != :UserId and 
+					(p.createat > u.lastpostat or u.lastpostat is null)
+				group by p.rootid
+				`,
+				map[string]interface{}{"ChannelId": channelId, "UserId": userId})
+			fmt.Println("-- -> err = ", err)
 			result.Data = &unreadChannel
 		}
 	})
@@ -1350,7 +1425,7 @@ func (s SqlChannelStore) PermanentDeleteMembersByUser(userId string) store.Store
 	})
 }
 
-func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, userId string) store.StoreChannel {
+func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts []*int64, userId string) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
 		props := make(map[string]interface{})
 
@@ -1362,7 +1437,16 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, userId string) 
 
 			props["channelId"+strconv.Itoa(index)] = channelId
 			updateIdQuery += "ChannelId = :channelId" + strconv.Itoa(index)
+
+			// DOGEZER RZ:
+			props["lastPostId"+strconv.Itoa(index)] = ""
 		}
+		for index, lastViewedAt := range lastViewedAts {
+			if lastViewedAt != nil {
+				props["lastViewed"+strconv.Itoa(index)] = *lastViewedAt
+			}
+		}
+		// :END
 
 		selectIdQuery := strings.Replace(updateIdQuery, "ChannelId", "Id", -1)
 
@@ -1385,13 +1469,35 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, userId string) 
 		for index, t := range lastPostAtTimes {
 			times[t.Id] = t.LastPostAt
 
-			props["msgCount"+strconv.Itoa(index)] = t.TotalMsgCount
-			msgCountQuery += fmt.Sprintf("WHEN :channelId%d THEN GREATEST(MsgCount, :msgCount%d) ", index, index)
-
-			props["lastViewed"+strconv.Itoa(index)] = t.LastPostAt
-			lastViewedQuery += fmt.Sprintf("WHEN :channelId%d THEN GREATEST(LastViewedAt, :lastViewed%d) ", index, index)
+			// DOGEZER RZ:
+			at, ok := props["lastViewed"+strconv.Itoa(index)]
+			//if !ok || at.(int64) < t.LastPostAt {
+			if !ok {
+				props["lastViewed"+strconv.Itoa(index)] = t.LastPostAt
+				lastViewedQuery += fmt.Sprintf("WHEN :channelId%d THEN GREATEST(LastViewedAt, :lastViewed%d) ", index, index)
+			} else {
+				times[t.Id] = at.(int64)
+				lastViewedQuery += fmt.Sprintf("WHEN :channelId%d THEN :lastViewed%d ", index, index)
+			}
 
 			props["channelId"+strconv.Itoa(index)] = t.Id
+
+			if !ok {
+				props["msgCount"+strconv.Itoa(index)] = t.TotalMsgCount
+				msgCountQuery += fmt.Sprintf("WHEN :channelId%d THEN GREATEST(MsgCount, :msgCount%d) ", index, index)
+			} else {
+				// TODO improve performance
+				var userMsgCount int64
+				var err error
+				userMsgCountQuery := fmt.Sprintf("SELECT count(*) FROM Posts WHERE ChannelId=:channelId%d AND CreateAt > :lastViewed%d", index, index)
+				if userMsgCount, err = s.GetMaster().SelectInt(userMsgCountQuery, props); err != nil {
+					result.Err = model.NewAppError("SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+				props["msgCount"+strconv.Itoa(index)] = t.TotalMsgCount - userMsgCount
+				msgCountQuery += fmt.Sprintf("WHEN :channelId%d THEN :msgCount%d ", index, index)
+			}
+			// :END
 		}
 
 		var updateQuery string

@@ -25,6 +25,15 @@ type ChannelUnread struct {
 	MsgCount     int64     `json:"msg_count"`
 	MentionCount int64     `json:"mention_count"`
 	NotifyProps  StringMap `json:"-"`
+	// DOGEZER RZ:
+	LastViewedAt int64                `json:"last_viewed_at"`
+	ByThreads    []*ChannelPostUnread `json:"by_threads"`
+}
+
+// DOGEZER RZ:
+type ChannelsUnreads struct {
+	Channels []*ChannelUnread     `json:"by_channels"`
+	Threads  []*ChannelPostUnread `json:"by_threads"`
 }
 
 type ChannelMember struct {
@@ -54,6 +63,28 @@ func (o *ChannelMembers) ToJson() string {
 func (o *ChannelUnread) ToJson() string {
 	b, _ := json.Marshal(o)
 	return string(b)
+}
+
+// DOGEZER RZ:
+func (o *ChannelsUnreads) ToJson() string {
+	b, err := json.Marshal(o)
+	if err != nil {
+		return "[]"
+	} else {
+		return string(b)
+	}
+}
+
+// DOGEZER RZ:
+func ChannelsUnreadsFromJson(data io.Reader) *ChannelsUnreads {
+	decoder := json.NewDecoder(data)
+	var o ChannelsUnreads
+	err := decoder.Decode(&o)
+	if err == nil {
+		return &o
+	} else {
+		return nil
+	}
 }
 
 func ChannelMembersFromJson(data io.Reader) *ChannelMembers {

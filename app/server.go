@@ -88,10 +88,18 @@ func (a *App) StartServer() error {
 	mlog.Info("Starting Server...")
 
 	var handler http.Handler = a.Srv.RootRouter
-	if allowedOrigins := *a.Config().ServiceSettings.AllowCorsFrom; allowedOrigins != "" {
-		exposedCorsHeaders := *a.Config().ServiceSettings.CorsExposedHeaders
-		allowCredentials := *a.Config().ServiceSettings.CorsAllowCredentials
-		debug := *a.Config().ServiceSettings.CorsDebug
+
+	allowedOrigins := *a.Config().ServiceSettings.AllowCorsFrom
+	exposedCorsHeaders := *a.Config().ServiceSettings.CorsExposedHeaders
+	allowCredentials := *a.Config().ServiceSettings.CorsAllowCredentials
+	debug := *a.Config().ServiceSettings.CorsDebug
+
+	mlog.Info(fmt.Sprintf(" *** AllowCorsFrom = %s", allowedOrigins))
+	mlog.Info(fmt.Sprintf(" *** exposedCorsHeaders = %s", exposedCorsHeaders))
+	mlog.Info(fmt.Sprintf(" *** allowCredentials = %s", allowCredentials))
+
+	if allowedOrigins != "" {
+		// todo
 		corsWrapper := cors.New(cors.Options{
 			AllowedOrigins:   strings.Fields(allowedOrigins),
 			AllowedMethods:   corsAllowedMethods,
@@ -248,7 +256,10 @@ func (a *App) StopServer() {
 }
 
 func (a *App) OriginChecker() func(*http.Request) bool {
-	if allowed := *a.Config().ServiceSettings.AllowCorsFrom; allowed != "" {
+	allowed := *a.Config().ServiceSettings.AllowCorsFrom
+	mlog.Info(fmt.Sprintf(" *** AllowCorsFrom = %s", allowed))
+
+	if allowed != "" {
 		if allowed != "*" {
 			siteURL, err := url.Parse(*a.Config().ServiceSettings.SiteURL)
 			if err == nil {

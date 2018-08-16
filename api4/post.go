@@ -5,6 +5,7 @@ package api4
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,6 +19,10 @@ func (api *API) InitPost() {
 	api.BaseRoutes.Post.Handle("", api.ApiSessionRequired(deletePost)).Methods("DELETE")
 	api.BaseRoutes.Posts.Handle("/ephemeral", api.ApiSessionRequired(createEphemeralPost)).Methods("POST")
 	api.BaseRoutes.Post.Handle("/thread", api.ApiSessionRequired(getPostThread)).Methods("GET")
+
+	// DOGEZER RZ:
+	api.BaseRoutes.Post.Handle("/thread/view", api.ApiSessionRequired(viewPostThread)).Methods("POST")
+
 	api.BaseRoutes.Post.Handle("/files/info", api.ApiSessionRequired(getFileInfosForPost)).Methods("GET")
 	api.BaseRoutes.PostsForChannel.Handle("", api.ApiSessionRequired(getPostsForChannel)).Methods("GET")
 	api.BaseRoutes.PostsForUser.Handle("/flagged", api.ApiSessionRequired(getFlaggedPostsForUser)).Methods("GET")
@@ -98,6 +103,38 @@ func createEphemeralPost(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(c.App.PostWithProxyAddedToImageURLs(rp).ToJson()))
 }
+
+// DOGEZER RZ:
+func viewPostThread(c *Context, w http.ResponseWriter, r *http.Request) {
+	c.RequirePostId()
+	if c.Err != nil {
+		return
+	}
+
+	unread := model.PostUnreadFromJson(r.Body)
+	fmt.Println("----------- viewPostThread -> unread(FromJson) = ", unread)
+	if unread == nil {
+		c.SetInvalidParam("unread")
+		return
+	}
+	unread.PostId = c.Params.PostId
+	unread.UserId = c.Session.UserId
+
+	fmt.Println("-----------api.Post -> viewPostThread -> unread(after) = ", unread)
+	rp, err := c.App.ViewPost(unread)
+	if err != nil {
+		c.Err = err
+		return
+	}
+
+	c.App.SetStatusOnline(c.Session.UserId, false)
+	c.App.UpdateLastActivityAtIfNeeded(c.Session)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(rp.ToJson()))
+}
+
+// :END
 
 func getPostsForChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.RequireChannelId()

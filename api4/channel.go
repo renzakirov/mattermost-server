@@ -34,6 +34,8 @@ func (api *API) InitChannel() {
 	api.BaseRoutes.Channel.Handle("/pinned", api.ApiSessionRequired(getPinnedPosts)).Methods("GET")
 
 	api.BaseRoutes.ChannelForUser.Handle("/unread", api.ApiSessionRequired(getChannelUnread)).Methods("GET")
+	// DOGEZER RZ:
+	api.BaseRoutes.UnreadsInChannelsForUser.Handle("", api.ApiSessionRequired(getAllChannelsUnreads)).Methods("GET")
 
 	api.BaseRoutes.ChannelByName.Handle("", api.ApiSessionRequired(getChannelByName)).Methods("GET")
 	api.BaseRoutes.ChannelByNameForTeamName.Handle("", api.ApiSessionRequired(getChannelByNameForTeamName)).Methods("GET")
@@ -439,6 +441,27 @@ func getChannelUnread(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(channelUnread.ToJson()))
+}
+
+// DOGEZER RZ:
+func getAllChannelsUnreads(c *Context, w http.ResponseWriter, r *http.Request) {
+	c.RequireUserId()
+	if c.Err != nil {
+		return
+	}
+
+	if !c.App.SessionHasPermissionToUser(c.Session, c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
+
+	channelsUnreads, err := c.App.GetAllChannelsUnreads(c.Params.UserId)
+	if err != nil {
+		c.Err = err
+		return
+	}
+
+	w.Write([]byte(channelsUnreads.ToJson()))
 }
 
 func getChannelStats(c *Context, w http.ResponseWriter, r *http.Request) {

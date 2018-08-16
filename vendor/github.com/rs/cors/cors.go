@@ -249,24 +249,33 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	headers.Add("Vary", "Origin")
 	headers.Add("Vary", "Access-Control-Request-Method")
 	headers.Add("Vary", "Access-Control-Request-Headers")
+	headers.Add("Renat", origin)
+	str := ""
 
 	if origin == "" {
 		c.logf("  Preflight aborted: empty origin")
+		headers.Add("Renat", "1 - Preflight aborted: empty origin")
 		return
 	}
 	if !c.isOriginAllowed(origin) {
 		c.logf("  Preflight aborted: origin '%s' not allowed", origin)
+		str = "2 - Preflight aborted: origin " + origin + " not allowed"
+		headers.Add("Renat", str)
 		return
 	}
 
 	reqMethod := r.Header.Get("Access-Control-Request-Method")
 	if !c.isMethodAllowed(reqMethod) {
+		str = "3 - Preflight aborted: method " + reqMethod + " not allowed"
 		c.logf("  Preflight aborted: method '%s' not allowed", reqMethod)
+		headers.Add("Renat", str)
 		return
 	}
 	reqHeaders := parseHeaderList(r.Header.Get("Access-Control-Request-Headers"))
 	if !c.areHeadersAllowed(reqHeaders) {
+		str = "4-  Preflight aborted: headers " + strings.Join(reqHeaders, " ") + " not allowed"
 		c.logf("  Preflight aborted: headers '%v' not allowed", reqHeaders)
+		headers.Add("Renat", str)
 		return
 	}
 	if c.allowedOriginsAll && !c.allowCredentials {
@@ -345,23 +354,30 @@ func (c *Cors) logf(format string, a ...interface{}) {
 // isOriginAllowed checks if a given origin is allowed to perform cross-domain requests
 // on the endpoint
 func (c *Cors) isOriginAllowed(origin string) bool {
+	// return true
+	c.logf(" *** 1 in fn = isOriginAllowed: origin = %s", origin)
 	if c.allowOriginFunc != nil {
+		c.logf(" *** 2 -> return c.allowOriginFunc(origin) = %t", c.allowOriginFunc(origin))
 		return c.allowOriginFunc(origin)
 	}
 	if c.allowedOriginsAll {
+		c.logf(" *** 3 -> c.allowedOriginsAll = return true")
 		return true
 	}
 	origin = strings.ToLower(origin)
+	c.logf(" *** 4 -> c.allowedOrigins = %v ", c.allowedOrigins)
 	for _, o := range c.allowedOrigins {
 		if o == origin {
 			return true
 		}
 	}
+	c.logf(" *** 5 -> c.allowedWOrigins = %v ", c.allowedWOrigins)
 	for _, w := range c.allowedWOrigins {
 		if w.match(origin) {
 			return true
 		}
 	}
+	c.logf(" *** END -> return false")
 	return false
 }
 

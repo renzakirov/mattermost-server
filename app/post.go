@@ -80,7 +80,9 @@ func (a *App) CreatePostAsUser(post *model.Post) (*model.Post, *model.AppError) 
 	} else {
 		// Update the LastViewAt only if the post does not have from_webhook prop set (eg. Zapier app)
 		if _, ok := post.Props["from_webhook"]; !ok {
-			if result := <-a.Srv.Store.Channel().UpdateLastViewedAt([]string{post.ChannelId}, post.UserId); result.Err != nil {
+
+			// DOGEZER RZ:
+			if result := <-a.Srv.Store.Channel().UpdateLastViewedAt([]string{post.ChannelId}, nil, post.UserId); result.Err != nil {
 				mlog.Error(fmt.Sprintf("Encountered error updating last viewed, channel_id=%s, user_id=%s, err=%v", post.ChannelId, post.UserId, result.Err))
 			}
 
@@ -469,6 +471,18 @@ func (a *App) sendUpdatedPostEvent(post *model.Post) {
 	message.Add("post", a.PostWithProxyAddedToImageURLs(post).ToJson())
 	a.Publish(message)
 }
+
+// DOGEZER RZ:
+func (a *App) sendViewThreadEvent(unread *model.PostUnread) {
+	message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_THREAD_VIEW, "", unread.ChannelId, unread.UserId, nil)
+	message.Add("unread", unread.ToJson())
+
+	a.Go(func() {
+		a.Publish(message)
+	})
+}
+
+// :END
 
 func (a *App) GetPostsPage(channelId string, page int, perPage int) (*model.PostList, *model.AppError) {
 	if result := <-a.Srv.Store.Post().GetPosts(channelId, page*perPage, perPage, true); result.Err != nil {

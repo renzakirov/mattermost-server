@@ -19,9 +19,13 @@ func NewStoreChannel(result store.StoreResult) store.StoreChannel {
 
 // Store can be used to provide mock stores for testing.
 type Store struct {
-	TeamStore                 mocks.TeamStore
-	ChannelStore              mocks.ChannelStore
-	PostStore                 mocks.PostStore
+	TeamStore    mocks.TeamStore
+	ChannelStore mocks.ChannelStore
+	PostStore    mocks.PostStore
+
+	// DOGEZER RZ:
+	// PostUnread mocks.PostUnreadStore
+
 	UserStore                 mocks.UserStore
 	AuditStore                mocks.AuditStore
 	ClusterDiscoveryStore     mocks.ClusterDiscoveryStore
@@ -47,9 +51,15 @@ type Store struct {
 	SchemeStore               mocks.SchemeStore
 }
 
-func (s *Store) Team() store.TeamStore                         { return &s.TeamStore }
-func (s *Store) Channel() store.ChannelStore                   { return &s.ChannelStore }
-func (s *Store) Post() store.PostStore                         { return &s.PostStore }
+func (s *Store) Team() store.TeamStore { return &s.TeamStore }
+
+// DOGEZER RZ: commented next line
+// func (s *Store) Channel() store.ChannelStore { return &s.ChannelStore }
+func (s *Store) Post() store.PostStore { return &s.PostStore }
+
+// DOGEZER RZ:
+// func (s *Store) PostUnread() store.PostUnreadStore { return &s.PostUnreadStore }
+
 func (s *Store) User() store.UserStore                         { return &s.UserStore }
 func (s *Store) Audit() store.AuditStore                       { return &s.AuditStore }
 func (s *Store) ClusterDiscovery() store.ClusterDiscoveryStore { return &s.ClusterDiscoveryStore }

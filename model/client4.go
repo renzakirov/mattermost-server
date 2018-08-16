@@ -1883,6 +1883,17 @@ func (c *Client4) GetChannelUnread(channelId, userId string) (*ChannelUnread, *R
 	}
 }
 
+// DOGEZER RZ:
+// GetAllChannelsUnreads return unreads {channels, threads} in all channels & threads accessible for user
+func (c *Client4) GetAllChannelsUnreads(userId string) (*ChannelsUnreads, *Response) {
+	if r, err := c.DoApiGet(c.GetUserRoute(userId)+"/channels/unreads", ""); err != nil {
+		return nil, BuildErrorResponse(r, err)
+	} else {
+		defer closeBody(r)
+		return ChannelsUnreadsFromJson(r.Body), BuildResponse(r)
+	}
+}
+
 // UpdateChannelRoles will update the roles on a channel for a user.
 func (c *Client4) UpdateChannelRoles(channelId, userId, roles string) (bool, *Response) {
 	requestBody := map[string]string{"roles": roles}
