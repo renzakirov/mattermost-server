@@ -37,7 +37,8 @@ type Routes struct {
 	ChannelForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/{channel_id:[A-Za-z0-9]+}'
 
 	// DOGEZER RZ:
-	UnreadsInChannelsForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/unreads'
+	UnreadsInChannelsForUser   *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/unreads'
+	LastPostsInChannelsForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/channels/lasts'
 
 	ChannelByName            *mux.Router // 'api/v4/teams/{team_id:[A-Za-z0-9]+}/channels/name/{channel_name:[A-Za-z0-9_-]+}'
 	ChannelByNameForTeamName *mux.Router // 'api/v4/teams/name/{team_name:[A-Za-z0-9_-]+}/channels/name/{channel_name:[A-Za-z0-9_-]+}'
@@ -51,6 +52,8 @@ type Routes struct {
 	PostsForChannel *mux.Router // 'api/v4/channels/{channel_id:[A-Za-z0-9]+}/posts'
 	PostsForUser    *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/posts'
 	PostForUser     *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/posts/{post_id:[A-Za-z0-9]+}'
+	// DOGEZER RZ:
+	UnreadsInThreadForUser *mux.Router // 'api/v4/users/{user_id:[A-Za-z0-9]+}/posts/{post_id:[A-Za-z0-9]+}/unreads'
 
 	Files *mux.Router // 'api/v4/files'
 	File  *mux.Router // 'api/v4/files/{file_id:[A-Za-z0-9]+}'
@@ -147,6 +150,7 @@ func Init(a *app.App, root *mux.Router) *API {
 
 	// DOGEZER RZ:
 	api.BaseRoutes.UnreadsInChannelsForUser = api.BaseRoutes.User.PathPrefix("/channels/unreads").Subrouter()
+	api.BaseRoutes.LastPostsInChannelsForUser = api.BaseRoutes.User.PathPrefix("/channels/lasts").Subrouter()
 
 	api.BaseRoutes.ChannelByName = api.BaseRoutes.Team.PathPrefix("/channels/name/{channel_name:[A-Za-z0-9_-]+}").Subrouter()
 	api.BaseRoutes.ChannelByNameForTeamName = api.BaseRoutes.TeamByName.PathPrefix("/channels/name/{channel_name:[A-Za-z0-9_-]+}").Subrouter()
@@ -160,6 +164,8 @@ func Init(a *app.App, root *mux.Router) *API {
 	api.BaseRoutes.PostsForChannel = api.BaseRoutes.Channel.PathPrefix("/posts").Subrouter()
 	api.BaseRoutes.PostsForUser = api.BaseRoutes.User.PathPrefix("/posts").Subrouter()
 	api.BaseRoutes.PostForUser = api.BaseRoutes.PostsForUser.PathPrefix("/{post_id:[A-Za-z0-9]+}").Subrouter()
+	// DOGEZER RZ:
+	api.BaseRoutes.UnreadsInThreadForUser = api.BaseRoutes.PostForUser.PathPrefix("/unreads").Subrouter()
 
 	api.BaseRoutes.Files = api.BaseRoutes.ApiRoot.PathPrefix("/files").Subrouter()
 	api.BaseRoutes.File = api.BaseRoutes.Files.PathPrefix("/{file_id:[A-Za-z0-9]+}").Subrouter()

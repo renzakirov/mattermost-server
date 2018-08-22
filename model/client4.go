@@ -1894,6 +1894,28 @@ func (c *Client4) GetAllChannelsUnreads(userId string) (*ChannelsUnreads, *Respo
 	}
 }
 
+// DOGEZER RZ:
+// GetAllChannelsUnreads return unreads {channels, threads} in all channels & threads accessible for user
+func (c *Client4) GetAllLastPostsAt(userId string) (*LastsPosts, *Response) {
+	if r, err := c.DoApiGet(c.GetUserRoute(userId)+"/channels/lasts", ""); err != nil {
+		return nil, BuildErrorResponse(r, err)
+	} else {
+		defer closeBody(r)
+		return LastsPostsFromJson(r.Body), BuildResponse(r)
+	}
+}
+
+// DOGEZER RZ:
+// GetAllChannelsUnreads return unreads {channels, threads} in all channels & threads accessible for user
+func (c *Client4) GetThreadUnreads(threadId, userId string) (*ThreadUnread, *Response) {
+	if r, err := c.DoApiGet(c.GetUserRoute(userId)+c.GetPostRoute(threadId)+"/unreads", ""); err != nil {
+		return nil, BuildErrorResponse(r, err)
+	} else {
+		defer closeBody(r)
+		return ThreadUnreadFromJson(r.Body), BuildResponse(r)
+	}
+}
+
 // UpdateChannelRoles will update the roles on a channel for a user.
 func (c *Client4) UpdateChannelRoles(channelId, userId, roles string) (bool, *Response) {
 	requestBody := map[string]string{"roles": roles}

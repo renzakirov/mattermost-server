@@ -178,8 +178,11 @@ type ChannelStore interface {
 	MigrateChannelMembers(fromChannelId string, fromUserId string) StoreChannel
 	ResetAllChannelSchemes() StoreChannel
 	ClearAllCustomRoleAssignments() StoreChannel
+
 	// DOGEZER RZ:
 	GetAllChannelsUnreads(userId string) StoreChannel
+	GetAllLastPostsAt(userId string) StoreChannel
+	GetThreadUnreads(threadId, userId string) StoreChannel
 }
 
 type ChannelMemberHistoryStore interface {

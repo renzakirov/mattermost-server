@@ -492,58 +492,6 @@ func (s SqlChannelStore) Update(channel *model.Channel) store.StoreChannel {
 	})
 }
 
-// DOGEZER RZ:
-func (s SqlChannelStore) GetAllChannelsUnreads(userId string) store.StoreChannel {
-	return store.Do(func(result *store.StoreResult) {
-		// fmt.Println("---------- in store getAllChannelsUnreads -> userId = ", userId)
-		// var unreadsChannels model.ChannelsUnreads
-		var data model.ChannelsUnreads
-		params := map[string]interface{}{"UserId": userId}
-		_, err := s.GetReplica().Select(&data.Channels,
-			`SELECT
-				c.teamid TeamId,
-				CM.ChannelId ChannelId, 
-				(c.TotalMsgCount - cm.MsgCount) MsgCount, 
-				cm.MentionCount MentionCount, 
-				cm.LastViewedAt LastViewedAt
-			FROM Channels as C join ChannelMembers as CM 
-			on CM.channelid = c.id and cm.userid= :UserId
-			WHERE
-				UserId = :UserId
-				AND DeleteAt = 0
-			`,
-			params)
-		// GetChannelUnread
-		if err != nil {
-			result.Err = model.NewAppError("SqlChannelStore.GetChannelUnread", "store.sql_channel.get_unread.app_error", nil, "all user channels "+err.Error(), http.StatusInternalServerError)
-			if err == sql.ErrNoRows {
-				result.Err.StatusCode = http.StatusNotFound
-			}
-		} else {
-			_, err = s.GetReplica().Select(&data.Threads,
-				`
-				select count(*),
-					p.rootid as RootId,
-					coalesce(min(u.lastpostat), 0) as LastViewedAt,
-					min(p.createat) as FirstUnreadAt,
-					max(p.createat) as LastPostAt,
-					count(*) as MsgCount
-				from postunreads as u
-				right join posts as p
-				on u.postid = p.rootid and
-					u.userid = :UserId
-				where
-					p.rootid != '' and
-					p.userid != :UserId and
-					(p.createat > u.lastpostat or u.lastpostat is null)
-				group by p.rootid
-			`, params)
-			fmt.Println("-- -> err = ", err)
-			result.Data = &data
-		}
-	})
-}
-
 func (s SqlChannelStore) GetChannelUnread(channelId, userId string) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
 		var unreadChannel model.ChannelUnread
