@@ -69,8 +69,9 @@ type SqlSupplierOldStores struct {
 	channel store.ChannelStore
 	post    store.PostStore
 
-	// DOGEZER RZ:
+	// DOGEZER:
 	postUnread store.PostUnreadStore
+	mention    store.MentionStore
 
 	user                 store.UserStore
 	audit                store.AuditStore
@@ -126,6 +127,7 @@ func NewSqlSupplier(settings model.SqlSettings, metrics einterfaces.MetricsInter
 
 	// DOGEZER RZ:
 	supplier.oldStores.postUnread = NewSqlPostUnreadStore(supplier, metrics)
+	supplier.oldStores.mention = NewSqlMentionStore(supplier, metrics)
 
 	supplier.oldStores.user = NewSqlUserStore(supplier, metrics)
 	supplier.oldStores.audit = NewSqlAuditStore(supplier)
@@ -167,6 +169,7 @@ func NewSqlSupplier(settings model.SqlSettings, metrics einterfaces.MetricsInter
 
 	// DOGEZER RZ:
 	supplier.oldStores.postUnread.(*SqlPostUnreadStore).CreateIndexesIfNotExists()
+	supplier.oldStores.mention.(*SqlMentionStore).CreateIndexesIfNotExists()
 
 	supplier.oldStores.user.(*SqlUserStore).CreateIndexesIfNotExists()
 	supplier.oldStores.audit.(*SqlAuditStore).CreateIndexesIfNotExists()
@@ -833,9 +836,15 @@ func (ss *SqlSupplier) Post() store.PostStore {
 	return ss.oldStores.post
 }
 
+// DOGEZER RZ:
 func (ss *SqlSupplier) PostUnread() store.PostUnreadStore {
 	return ss.oldStores.postUnread
 }
+func (ss *SqlSupplier) Mention() store.MentionStore {
+	return ss.oldStores.mention
+}
+
+// END
 
 func (ss *SqlSupplier) User() store.UserStore {
 	return ss.oldStores.user

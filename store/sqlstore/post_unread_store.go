@@ -1,3 +1,4 @@
+// DOGEZER
 package sqlstore
 
 import (

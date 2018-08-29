@@ -113,6 +113,8 @@ func (a *App) CreatePostMissingChannel(post *model.Post, triggerWebhooks bool) (
 func (a *App) CreatePost(post *model.Post, channel *model.Channel, triggerWebhooks bool) (*model.Post, *model.AppError) {
 	post.SanitizeProps()
 
+	// fmt.Println(" ------ in App Post - CreatePost -> post = ", post)
+
 	var pchan store.StoreChannel
 	if len(post.RootId) > 0 {
 		pchan = a.Srv.Store.Post().Get(post.RootId)

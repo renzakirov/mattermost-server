@@ -23,7 +23,7 @@ type Store struct {
 	ChannelStore mocks.ChannelStore
 	PostStore    mocks.PostStore
 
-	// DOGEZER RZ:
+	// DOGEZER RZ: commented next line
 	// PostUnread mocks.PostUnreadStore
 
 	UserStore                 mocks.UserStore
@@ -57,7 +57,7 @@ func (s *Store) Team() store.TeamStore { return &s.TeamStore }
 // func (s *Store) Channel() store.ChannelStore { return &s.ChannelStore }
 func (s *Store) Post() store.PostStore { return &s.PostStore }
 
-// DOGEZER RZ:
+// DOGEZER RZ: commented next line
 // func (s *Store) PostUnread() store.PostUnreadStore { return &s.PostUnreadStore }
 
 func (s *Store) User() store.UserStore                         { return &s.UserStore }

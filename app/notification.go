@@ -56,6 +56,7 @@ func (a *App) SendNotifications(post *model.Post, team *model.Team, channel *mod
 	channelNotification := false
 	allNotification := false
 	updateMentionChans := []store.StoreChannel{}
+	insertMention := []store.StoreChannel{}
 
 	if channel.Type == model.CHANNEL_DIRECT {
 		var otherUserId string
@@ -155,6 +156,7 @@ func (a *App) SendNotifications(post *model.Post, team *model.Team, channel *mod
 	for id := range mentionedUserIds {
 		mentionedUsersList = append(mentionedUsersList, id)
 		updateMentionChans = append(updateMentionChans, a.Srv.Store.Channel().IncrementMentionCount(post.ChannelId, id))
+		insertMention = append(insertMention, a.Srv.Store.Mention().Save(post, id))
 	}
 
 	var senderUsername string
@@ -277,6 +279,11 @@ func (a *App) SendNotifications(post *model.Post, team *model.Team, channel *mod
 	for _, uchan := range updateMentionChans {
 		if result := <-uchan; result.Err != nil {
 			mlog.Warn(fmt.Sprintf("Failed to update mention count, post_id=%v channel_id=%v err=%v", post.Id, post.ChannelId, result.Err), mlog.String("post_id", post.Id))
+		}
+	}
+	for _, ichan := range insertMention {
+		if result := <-ichan; result.Err != nil {
+			mlog.Warn(fmt.Sprintf("Failed to insert mention, post_id=%v channel_id=%v err=%v", post.Id, post.ChannelId, result.Err), mlog.String("post_id", post.Id))
 		}
 	}
 

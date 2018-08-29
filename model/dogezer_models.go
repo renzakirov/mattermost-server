@@ -128,3 +128,32 @@ func ThreadUnreadFromJson(data io.Reader) *ThreadUnread {
 		return nil
 	}
 }
+
+// ---------------------------------------- Mention ---------------
+
+type Mention struct {
+	UserId    string `json:"user_id"`
+	ChannelId string `json:"channel_id"`
+	RootId    string `json:"root_id"`
+	PostId    string `json:"post_id"`
+	CreateAt  int64  `json:"create_at"`
+	AuthorId  string `json:"author_id"`
+}
+
+func (m *Mention) ToJson() string {
+	data, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+func MentionFromJson(data io.Reader) *Mention {
+	decoder := json.NewDecoder(data)
+	var o Mention
+	err := decoder.Decode(&o)
+	if err == nil {
+		return &o
+	} else {
+		return nil
+	}
+}

@@ -116,9 +116,9 @@ func (s SqlChannelStore) GetChannelUnreads(channelId, userId string) store.Store
 				Channels, ChannelMembers
 			WHERE
 				Id = ChannelId
-                AND Id = :ChannelId
-                AND UserId = :UserId
-                AND DeleteAt = 0`,
+				AND Id = :ChannelId
+				AND UserId = :UserId
+				AND DeleteAt = 0`,
 			map[string]interface{}{"ChannelId": channelId, "UserId": userId})
 
 		if err != nil {
@@ -150,6 +150,15 @@ func (s SqlChannelStore) GetChannelUnreads(channelId, userId string) store.Store
 				`,
 				map[string]interface{}{"ChannelId": channelId, "UserId": userId})
 			fmt.Println("-- -> err = ", err)
+			/* if err == nil {
+					var mentions []*model.Mention
+					_, err = s.GetReplica.Select(&mentions,
+					`
+						select
+							count (*) from
+					`, map[string]interface{}{"ChannelId": channelId, "UserId": userId})
+			}
+			*/
 			result.Data = &unreadChannel
 		}
 	})

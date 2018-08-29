@@ -45,6 +45,7 @@ type Store interface {
 
 	// DOGEZER RZ:
 	PostUnread() PostUnreadStore
+	Mention() MentionStore
 
 	User() UserStore
 	Audit() AuditStore
@@ -226,6 +227,10 @@ type PostStore interface {
 // DOGEZER RZ:
 type PostUnreadStore interface {
 	View(unread *model.PostUnread) StoreChannel
+}
+type MentionStore interface {
+	Save(post *model.Post, id string) StoreChannel
+	View(mention *model.Mention) StoreChannel
 }
 
 type UserStore interface {

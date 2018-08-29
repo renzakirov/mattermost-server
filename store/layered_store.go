@@ -85,6 +85,11 @@ func (s *LayeredStore) Post() PostStore {
 func (s *LayeredStore) PostUnread() PostUnreadStore {
 	return s.DatabaseLayer.PostUnread()
 }
+func (s *LayeredStore) Mention() MentionStore {
+	return s.DatabaseLayer.Mention()
+}
+
+// END
 
 func (s *LayeredStore) User() UserStore {
 	return s.DatabaseLayer.User()
