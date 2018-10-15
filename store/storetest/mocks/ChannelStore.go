@@ -178,6 +178,38 @@ func (_m *ChannelStore) GetAllChannelMembersNotifyPropsForChannel(channelId stri
 	return r0
 }
 
+// GetAllChannelsUnreads provides a mock function with given fields: userId
+func (_m *ChannelStore) GetAllChannelsUnreads(userId string) store.StoreChannel {
+	ret := _m.Called(userId)
+
+	var r0 store.StoreChannel
+	if rf, ok := ret.Get(0).(func(string) store.StoreChannel); ok {
+		r0 = rf(userId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.StoreChannel)
+		}
+	}
+
+	return r0
+}
+
+// GetAllLastPostsAt provides a mock function with given fields: userId
+func (_m *ChannelStore) GetAllLastPostsAt(userId string) store.StoreChannel {
+	ret := _m.Called(userId)
+
+	var r0 store.StoreChannel
+	if rf, ok := ret.Get(0).(func(string) store.StoreChannel); ok {
+		r0 = rf(userId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.StoreChannel)
+		}
+	}
+
+	return r0
+}
+
 // GetByName provides a mock function with given fields: team_id, name, allowFromCache
 func (_m *ChannelStore) GetByName(team_id string, name string, allowFromCache bool) store.StoreChannel {
 	ret := _m.Called(team_id, name, allowFromCache)
@@ -544,6 +576,22 @@ func (_m *ChannelStore) GetTeamChannels(teamId string) store.StoreChannel {
 	return r0
 }
 
+// GetThreadUnreads provides a mock function with given fields: threadId, userId
+func (_m *ChannelStore) GetThreadUnreads(threadId string, userId string) store.StoreChannel {
+	ret := _m.Called(threadId, userId)
+
+	var r0 store.StoreChannel
+	if rf, ok := ret.Get(0).(func(string, string) store.StoreChannel); ok {
+		r0 = rf(threadId, userId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.StoreChannel)
+		}
+	}
+
+	return r0
+}
+
 // IncrementMentionCount provides a mock function with given fields: channelId, userId
 func (_m *ChannelStore) IncrementMentionCount(channelId string, userId string) store.StoreChannel {
 	ret := _m.Called(channelId, userId)
@@ -839,13 +887,13 @@ func (_m *ChannelStore) Update(channel *model.Channel) store.StoreChannel {
 	return r0
 }
 
-// UpdateLastViewedAt provides a mock function with given fields: channelIds, userId
-func (_m *ChannelStore) UpdateLastViewedAt(channelIds []string, userId string) store.StoreChannel {
-	ret := _m.Called(channelIds, userId)
+// UpdateLastViewedAt provides a mock function with given fields: channelIds, lastViewedAt, userId
+func (_m *ChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAt []*int64, userId string) store.StoreChannel {
+	ret := _m.Called(channelIds, lastViewedAt, userId)
 
 	var r0 store.StoreChannel
-	if rf, ok := ret.Get(0).(func([]string, string) store.StoreChannel); ok {
-		r0 = rf(channelIds, userId)
+	if rf, ok := ret.Get(0).(func([]string, []*int64, string) store.StoreChannel); ok {
+		r0 = rf(channelIds, lastViewedAt, userId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(store.StoreChannel)

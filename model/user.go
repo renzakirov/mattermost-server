@@ -266,7 +266,7 @@ func (u *User) SetDefaultNotifications() {
 	u.NotifyProps["push"] = USER_NOTIFY_MENTION
 	u.NotifyProps["desktop"] = USER_NOTIFY_MENTION
 	u.NotifyProps["desktop_sound"] = "true"
-	u.NotifyProps["mention_keys"] = u.Username + ",@" + u.Username
+	u.NotifyProps["mention_keys"] = "@" + u.Username // DOGEZER RZ: old version ->  = u.Username + ",@" + u.Username
 	u.NotifyProps["channel"] = "true"
 	u.NotifyProps["push_status"] = STATUS_AWAY
 	u.NotifyProps["comments"] = "never"

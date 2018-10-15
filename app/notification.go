@@ -97,13 +97,13 @@ func (a *App) SendNotifications(post *model.Post, team *model.Team, channel *mod
 
 		// Add an implicit mention when a user is added to a channel
 		// even if the user has set 'username mentions' to false in account settings.
-		if post.Type == model.POST_ADD_TO_CHANNEL {
-			val := post.Props[model.POST_PROPS_ADDED_USER_ID]
-			if val != nil {
-				uid := val.(string)
-				m.MentionedUserIds[uid] = true
-			}
-		}
+		// if post.Type == model.POST_ADD_TO_CHANNEL {
+		// 	val := post.Props[model.POST_PROPS_ADDED_USER_ID]
+		// 	if val != nil {
+		// 		uid := val.(string)
+		// 		m.MentionedUserIds[uid] = true
+		// 	}
+		// }
 
 		mentionedUserIds, hereNotification, channelNotification, allNotification = m.MentionedUserIds, m.HereMentioned, m.ChannelMentioned, m.AllMentioned
 

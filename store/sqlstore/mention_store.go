@@ -68,7 +68,7 @@ func (s SqlMentionStore) Save(post *model.Post, id string) store.StoreChannel {
 
 func (s SqlMentionStore) View(mention *model.Mention) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
-		result.Err = model.NewAppError("SqlPostUnreadStore.View", "store.sql_post_unread.view", nil, "EROROROROR", 10)
+		result.Err = model.NewAppError("SqlMentionStore.View", "store.sql_post_unread.view", nil, "EROROROROR", 10)
 		result.Data = mention
 		return
 	})

@@ -208,6 +208,22 @@ func (_m *Store) MarkSystemRanUnitTests() {
 	_m.Called()
 }
 
+// Mention provides a mock function with given fields:
+func (_m *Store) Mention() store.MentionStore {
+	ret := _m.Called()
+
+	var r0 store.MentionStore
+	if rf, ok := ret.Get(0).(func() store.MentionStore); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.MentionStore)
+		}
+	}
+
+	return r0
+}
+
 // OAuth provides a mock function with given fields:
 func (_m *Store) OAuth() store.OAuthStore {
 	ret := _m.Called()
@@ -250,6 +266,22 @@ func (_m *Store) Post() store.PostStore {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(store.PostStore)
+		}
+	}
+
+	return r0
+}
+
+// PostUnread provides a mock function with given fields:
+func (_m *Store) PostUnread() store.PostUnreadStore {
+	ret := _m.Called()
+
+	var r0 store.PostUnreadStore
+	if rf, ok := ret.Get(0).(func() store.PostUnreadStore); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.PostUnreadStore)
 		}
 	}
 

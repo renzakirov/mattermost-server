@@ -49,8 +49,9 @@ func LastsPostsFromJson(data io.Reader) *LastsPosts {
 
 // ---------------------------------------- ChannelsUnreads ---------------
 type ChannelsUnreads struct {
-	Channels []*ChannelUnread `json:"by_channels"`
-	Threads  []*ThreadUnread  `json:"by_threads"`
+	Channels []*ChannelUnread  `json:"by_channels"`
+	Threads  []*ThreadUnread   `json:"by_threads"`
+	Mentions []*ThreadMentions `json:"mentions_by_threads"`
 }
 
 func (cu *ChannelsUnreads) ToJson() string {
@@ -108,6 +109,7 @@ type ThreadUnread struct {
 	FirstUnreadAt int64  `json:"first_unread_at"`
 	LastPostAt    int64  `json:"last_post_at"`
 	MsgCount      int64  `json:"msg_count"`
+	MentionCount  int64  `json:"mention_count"`
 }
 
 func (tu *ThreadUnread) ToJson() string {
@@ -150,6 +152,58 @@ func (m *Mention) ToJson() string {
 func MentionFromJson(data io.Reader) *Mention {
 	decoder := json.NewDecoder(data)
 	var o Mention
+	err := decoder.Decode(&o)
+	if err == nil {
+		return &o
+	} else {
+		return nil
+	}
+}
+
+// ---------------------------------------- ThreadMentions ---------------
+
+type ThreadMentions struct {
+	RootId string `json:"root_id"`
+	Count  int64  `json:"count"`
+}
+
+func (tm *ThreadMentions) ToJson() string {
+	data, err := json.Marshal(tm)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+func ThreadMentionsFromJson(data io.Reader) *ThreadMentions {
+	decoder := json.NewDecoder(data)
+	var o ThreadMentions
+	err := decoder.Decode(&o)
+	if err == nil {
+		return &o
+	} else {
+		return nil
+	}
+}
+
+// ---------------------------------------- ChannelInfo ---------------
+
+type ChannelInfo struct {
+	ChannelId    string `json:"channel_id"`
+	MsgCount     int64  `json:"msg_count"`
+	MentionCount int64  `json:"mention_count"`
+	LastViewedAt int64  `json:"last_viewed_at"`
+}
+
+func (ci *ChannelInfo) ToJson() string {
+	data, err := json.Marshal(ci)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+func ChannelInfoFromJson(data io.Reader) *ChannelInfo {
+	decoder := json.NewDecoder(data)
+	var o ChannelInfo
 	err := decoder.Decode(&o)
 	if err == nil {
 		return &o

@@ -210,6 +210,22 @@ func (_m *LayeredStoreDatabaseLayer) MarkSystemRanUnitTests() {
 	_m.Called()
 }
 
+// Mention provides a mock function with given fields:
+func (_m *LayeredStoreDatabaseLayer) Mention() store.MentionStore {
+	ret := _m.Called()
+
+	var r0 store.MentionStore
+	if rf, ok := ret.Get(0).(func() store.MentionStore); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.MentionStore)
+		}
+	}
+
+	return r0
+}
+
 // Next provides a mock function with given fields:
 func (_m *LayeredStoreDatabaseLayer) Next() store.LayeredStoreSupplier {
 	ret := _m.Called()
@@ -268,6 +284,22 @@ func (_m *LayeredStoreDatabaseLayer) Post() store.PostStore {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(store.PostStore)
+		}
+	}
+
+	return r0
+}
+
+// PostUnread provides a mock function with given fields:
+func (_m *LayeredStoreDatabaseLayer) PostUnread() store.PostUnreadStore {
+	ret := _m.Called()
+
+	var r0 store.PostUnreadStore
+	if rf, ok := ret.Get(0).(func() store.PostUnreadStore); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(store.PostUnreadStore)
 		}
 	}
 

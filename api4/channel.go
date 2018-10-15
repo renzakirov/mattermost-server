@@ -885,7 +885,7 @@ func viewChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	times, err := c.App.ViewChannel(view, c.Params.UserId, !c.Session.IsMobileApp())
+	info, err := c.App.ViewChannel(view, c.Params.UserId, !c.Session.IsMobileApp())
 
 	if err != nil {
 		c.Err = err
@@ -895,9 +895,15 @@ func viewChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.App.UpdateLastActivityAtIfNeeded(c.Session)
 
 	// Returning {"status": "OK", ...} for backwards compatibility
+	lastViewedAtTimes := make(map[string]int64, len(info))
+
+	for _, val := range info {
+		lastViewedAtTimes[(*val).ChannelId] = (*val).LastViewedAt
+	}
+
 	resp := &model.ChannelViewResponse{
 		Status:            "OK",
-		LastViewedAtTimes: times,
+		LastViewedAtTimes: lastViewedAtTimes,
 	}
 
 	w.Write([]byte(resp.ToJson()))

@@ -89,6 +89,12 @@ func (a *App) CreatePostAsUser(post *model.Post) (*model.Post, *model.AppError) 
 			if *a.Config().ServiceSettings.EnableChannelViewedMessages {
 				message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_CHANNEL_VIEWED, "", "", post.UserId, nil)
 				message.Add("channel_id", post.ChannelId)
+				if len(post.RootId) > 0 {
+					message.Add("root_id", post.RootId)
+				}
+				message.Add("msg_count", 0)
+				message.Add("mention_count", 0)
+				message.Add("last_viewed_at", post.CreateAt)
 				a.Publish(message)
 			}
 		}
@@ -475,9 +481,9 @@ func (a *App) sendUpdatedPostEvent(post *model.Post) {
 }
 
 // DOGEZER RZ:
-func (a *App) sendViewThreadEvent(unread *model.PostUnread) {
+func (a *App) sendViewThreadEvent(threadUnread *model.ThreadUnread, unread *model.PostUnread) {
 	message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_THREAD_VIEW, "", unread.ChannelId, unread.UserId, nil)
-	message.Add("unread", unread.ToJson())
+	message.Add("unread", threadUnread.ToJson())
 
 	a.Go(func() {
 		a.Publish(message)
@@ -553,6 +559,17 @@ func (a *App) GetFlaggedPostsForChannel(userId, channelId string, offset int, li
 		return result.Data.(*model.PostList), nil
 	}
 }
+
+// DOGEZER RZ:
+func (a *App) GetNLastPosts(userId string, limit int) (*model.PostList, *model.AppError) {
+	if result := <-a.Srv.Store.Post().GetNLastPosts(userId, limit); result.Err != nil {
+		return nil, result.Err
+	} else {
+		return result.Data.(*model.PostList), nil
+	}
+}
+
+// :END
 
 func (a *App) GetPermalinkPost(postId string, userId string) (*model.PostList, *model.AppError) {
 	if result := <-a.Srv.Store.Post().Get(postId); result.Err != nil {

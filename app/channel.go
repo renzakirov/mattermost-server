@@ -1499,21 +1499,21 @@ func (a *App) SetActiveChannel(userId string, channelId string) *model.AppError 
 func (a *App) UpdateChannelLastViewedAt(channelIds []string, userId string) *model.AppError {
 
 	// DOGEZER RZ:
-	times := map[string]int64{}
+	// times := map[string]int64{}
+	var info []*model.ChannelInfo
 	if result := <-a.Srv.Store.Channel().UpdateLastViewedAt(channelIds, nil, userId); result.Err != nil {
 		return result.Err
 	} else {
-		tms := result.Data.(map[string]int64)
-		if tms != nil {
-			times = tms
-		}
+		info = result.Data.([]*model.ChannelInfo)
 	}
 
 	if *a.Config().ServiceSettings.EnableChannelViewedMessages {
-		for _, channelId := range channelIds {
+		for index := range channelIds {
 			message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_CHANNEL_VIEWED, "", "", userId, nil)
-			message.Add("channel_id", channelId)
-			message.Add("last_viewed_at", times[channelId])
+			message.Add("channel_id", info[index].ChannelId)
+			message.Add("msg_count", info[index].MsgCount)
+			message.Add("mention_count", info[index].MentionCount)
+			message.Add("last_viewed_at", info[index].LastViewedAt)
 			a.Publish(message)
 		}
 	}
@@ -1549,12 +1549,13 @@ func (a *App) SearchChannelsUserNotIn(teamId string, userId string, term string)
 	}
 }
 
-func (a *App) ViewChannel(view *model.ChannelView, userId string, clearPushNotifications bool) (map[string]int64, *model.AppError) {
+func (a *App) ViewChannel(view *model.ChannelView, userId string, clearPushNotifications bool) ([]*model.ChannelInfo, *model.AppError) {
 	if err := a.SetActiveChannel(userId, view.ChannelId); err != nil {
 		return nil, err
 	}
 
 	channelIds := []string{}
+	var info []*model.ChannelInfo
 
 	// DOGEZER RZ:
 	lastViewedAts := []*int64{}
@@ -1575,7 +1576,7 @@ func (a *App) ViewChannel(view *model.ChannelView, userId string, clearPushNotif
 	}
 
 	if len(channelIds) == 0 {
-		return map[string]int64{}, nil
+		return nil, nil
 	}
 
 	uchan := a.Srv.Store.Channel().UpdateLastViewedAt(channelIds, lastViewedAts, userId)
@@ -1590,21 +1591,27 @@ func (a *App) ViewChannel(view *model.ChannelView, userId string, clearPushNotif
 		}
 	}
 
-	var times map[string]int64
+	// var times map[string]int64
+
 	if result := <-uchan; result.Err != nil {
 		return nil, result.Err
 	} else {
-		times = result.Data.(map[string]int64)
+		// times = result.Data.(map[string]int64)
+		info = result.Data.([]*model.ChannelInfo)
 	}
 
 	if *a.Config().ServiceSettings.EnableChannelViewedMessages && model.IsValidId(view.ChannelId) {
-		message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_CHANNEL_VIEWED, "", "", userId, nil)
-		message.Add("channel_id", view.ChannelId)
-		message.Add("last_viewed_at", times[view.ChannelId])
-		a.Publish(message)
+		for _, chanelInfo := range info {
+			message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_CHANNEL_VIEWED, "", "", userId, nil)
+			message.Add("channel_id", (*chanelInfo).ChannelId)
+			message.Add("msg_count", (*chanelInfo).MsgCount)
+			message.Add("mention_count", (*chanelInfo).MentionCount)
+			message.Add("last_viewed_at", (*chanelInfo).LastViewedAt)
+			a.Publish(message)
+		}
 	}
 
-	return times, nil
+	return info, nil
 }
 
 func (a *App) PermanentDeleteChannel(channel *model.Channel) *model.AppError {

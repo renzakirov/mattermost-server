@@ -222,11 +222,15 @@ type PostStore interface {
 	PermanentDeleteBatch(endTime int64, limit int64) StoreChannel
 	GetOldest() StoreChannel
 	GetMaxPostSize() StoreChannel
+
+	// DOGEZER RZ:
+	GetNLastPosts(userId string, limit int) StoreChannel
 }
 
 // DOGEZER RZ:
 type PostUnreadStore interface {
 	View(unread *model.PostUnread) StoreChannel
+	GetUnreadsByUserAndRootId(unread *model.PostUnread) StoreChannel
 }
 type MentionStore interface {
 	Save(post *model.Post, id string) StoreChannel

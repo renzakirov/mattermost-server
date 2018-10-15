@@ -68,3 +68,29 @@ func getThreadUnreads(c *Context, w http.ResponseWriter, r *http.Request) {
 	fmt.Println("--- api -> getThreadUnreads end -> threadUnreads = ", threadUnreads)
 	w.Write([]byte(threadUnreads.ToJson()))
 }
+
+func getNLastPosts(c *Context, w http.ResponseWriter, r *http.Request) {
+	c.RequireUserId()
+	if c.Err != nil {
+		return
+	}
+
+	if !c.App.SessionHasPermissionToUser(c.Session, c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
+
+	limit := r.URL.Query().Get("limit")
+	fmt.Println("limit = ", limit)
+	var posts *model.PostList
+	var err *model.AppError
+
+	posts, err = c.App.GetNLastPosts(c.Params.UserId, 100)
+
+	if err != nil {
+		c.Err = err
+		return
+	}
+
+	w.Write([]byte(c.App.PostListWithProxyAddedToImageURLs(posts).ToJson()))
+}

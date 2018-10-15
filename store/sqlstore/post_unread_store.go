@@ -42,17 +42,6 @@ func NewSqlPostUnreadStore(sqlStore SqlStore, metrics einterfaces.MetricsInterfa
 func (s SqlPostUnreadStore) CreateIndexesIfNotExists() {
 
 	s.CreateIndexIfNotExists("idx_post_unreads_user_channel", "PostUnreads", "UserId, ChannelId")
-	/*
-		s.CreateIndexIfNotExists("idx_posts_create_at", "Posts", "CreateAt")
-		s.CreateIndexIfNotExists("idx_posts_delete_at", "Posts", "DeleteAt")
-		s.CreateIndexIfNotExists("idx_posts_channel_id", "Posts", "ChannelId")
-		s.CreateIndexIfNotExists("idx_posts_root_id", "Posts", "RootId")
-		s.CreateIndexIfNotExists("idx_posts_user_id", "Posts", "UserId")
-		s.CreateIndexIfNotExists("idx_posts_is_pinned", "Posts", "IsPinned")
-
-		s.CreateFullTextIndexIfNotExists("idx_posts_message_txt", "Posts", "Message")
-		s.CreateFullTextIndexIfNotExists("idx_posts_hashtags_txt", "Posts", "Hashtags")
-	*/
 }
 
 func (s SqlPostUnreadStore) View(unread *model.PostUnread) store.StoreChannel {
@@ -88,5 +77,55 @@ func (s SqlPostUnreadStore) View(unread *model.PostUnread) store.StoreChannel {
 			result.Err = model.NewAppError("SqlPostUnreadStore.View", "store.sql_post_unread.view", nil, fmt.Sprintf("%v", err), http.StatusInternalServerError)
 			return
 		}
+	})
+}
+
+func (s SqlPostUnreadStore) GetUnreadsByUserAndRootId(unread *model.PostUnread) store.StoreChannel {
+	return store.Do(func(result *store.StoreResult) {
+
+		var mentionCount, msgCount int64
+		params := map[string]interface{}{"UserId": unread.UserId, "RootId": unread.PostId, "LastPostAt": unread.LastPostAt}
+		mentionCount, err := s.GetReplica().SelectInt(
+			`select 
+				count (*)
+			from mentions
+			where
+				userid = :UserId and
+				rootid = :RootId and 
+				(createat > :LastPostAt)
+			`,
+			params)
+		if err != nil {
+			result.Err = model.NewAppError("SqlChannelStore.GetUnreadsByUserAndRootId", "store.sql_postunread.get_unread.app_error", nil, "all user channels "+err.Error(), http.StatusInternalServerError)
+		} else {
+			msgCount, err = s.GetReplica().SelectInt(
+				`	select count(*)
+					from posts
+					where 
+						rootid = :RootId and 
+						userid != :UserId and 
+						(createat > :LastPostAt)
+				`, params)
+
+			if err != nil {
+				result.Err = model.NewAppError("SqlChannelStore.GetUnreadsByUserAndRootId", "store.sql_postunread.get_unread.app_error", nil, "all user channels "+err.Error(), http.StatusInternalServerError)
+			} else {
+				fmt.Println(" --- threadId ", mentionCount)
+				fmt.Println(" --- msgCount ", msgCount)
+				fmt.Println(" --- mentionCount ", mentionCount)
+
+				var threadUnread model.ThreadUnread
+				threadUnread.RootId = unread.PostId
+				threadUnread.LastViewedAt = unread.LastPostAt
+				threadUnread.FirstUnreadAt = 0
+				threadUnread.LastPostAt = 0
+				threadUnread.MsgCount = msgCount
+				threadUnread.MentionCount = mentionCount
+
+				result.Data = &threadUnread
+			}
+
+		}
+
 	})
 }

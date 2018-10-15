@@ -1906,7 +1906,7 @@ func (c *Client4) GetAllLastPostsAt(userId string) (*LastsPosts, *Response) {
 }
 
 // DOGEZER RZ:
-// GetAllChannelsUnreads return unreads {channels, threads} in all channels & threads accessible for user
+// GetThreadUnreads return unreads {channels, threads} in all channels & threads accessible for user
 func (c *Client4) GetThreadUnreads(threadId, userId string) (*ThreadUnread, *Response) {
 	if r, err := c.DoApiGet(c.GetUserRoute(userId)+c.GetPostRoute(threadId)+"/unreads", ""); err != nil {
 		return nil, BuildErrorResponse(r, err)
@@ -2097,6 +2097,18 @@ func (c *Client4) GetPostsForChannel(channelId string, page, perPage int, etag s
 func (c *Client4) GetFlaggedPostsForUser(userId string, page int, perPage int) (*PostList, *Response) {
 	query := fmt.Sprintf("?page=%v&per_page=%v", page, perPage)
 	if r, err := c.DoApiGet(c.GetUserRoute(userId)+"/posts/flagged"+query, ""); err != nil {
+		return nil, BuildErrorResponse(r, err)
+	} else {
+		defer closeBody(r)
+		return PostListFromJson(r.Body), BuildResponse(r)
+	}
+}
+
+// DOGEZER RZ:
+// GetNLastPosts returns N last posts for user
+func (c *Client4) GetNLastPosts(userId string, limit int) (*PostList, *Response) {
+	fmt.Println("(c *Client4) GetNLastPosts ", userId, limit)
+	if r, err := c.DoApiGet(c.GetUserRoute(userId)+"/posts/last/"+"100", ""); err != nil {
 		return nil, BuildErrorResponse(r, err)
 	} else {
 		defer closeBody(r)

@@ -26,8 +26,9 @@ type ChannelUnread struct {
 	MentionCount int64     `json:"mention_count"`
 	NotifyProps  StringMap `json:"-"`
 	// DOGEZER RZ:
-	LastViewedAt int64           `json:"last_viewed_at"`
-	ByThreads    []*ThreadUnread `json:"by_threads"`
+	LastViewedAt int64             `json:"last_viewed_at"`
+	ByThreads    []*ThreadUnread   `json:"by_threads"`
+	Mentions     []*ThreadMentions `json:"mentions_by_threads"`
 }
 
 type ChannelMember struct {

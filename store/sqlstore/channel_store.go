@@ -1377,6 +1377,8 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 	return store.Do(func(result *store.StoreResult) {
 		props := make(map[string]interface{})
 
+		channelInfo := make([]*model.ChannelInfo, 0)
+
 		updateIdQuery := ""
 		for index, channelId := range channelIds {
 			if len(updateIdQuery) > 0 {
@@ -1387,11 +1389,13 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			updateIdQuery += "ChannelId = :channelId" + strconv.Itoa(index)
 
 			// DOGEZER RZ:
-			props["lastPostId"+strconv.Itoa(index)] = ""
+			// props["lastPostId"+strconv.Itoa(index)] = ""
+			channelInfo = append(channelInfo, &model.ChannelInfo{channelId, 0, 0, 0})
 		}
 		for index, lastViewedAt := range lastViewedAts {
 			if lastViewedAt != nil {
 				props["lastViewed"+strconv.Itoa(index)] = *lastViewedAt
+				(*channelInfo[index]).LastViewedAt = *lastViewedAt
 			}
 		}
 		// :END
@@ -1413,6 +1417,7 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 
 		times := map[string]int64{}
 		msgCountQuery := ""
+		mentionsCountQuery := ""
 		lastViewedQuery := ""
 		for index, t := range lastPostAtTimes {
 			times[t.Id] = t.LastPostAt
@@ -1431,20 +1436,35 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			props["channelId"+strconv.Itoa(index)] = t.Id
 
 			if !ok {
+				props["mentionsCount"+strconv.Itoa(index)] = 0
 				props["msgCount"+strconv.Itoa(index)] = t.TotalMsgCount
 				msgCountQuery += fmt.Sprintf("WHEN :channelId%d THEN GREATEST(MsgCount, :msgCount%d) ", index, index)
+
+				(*channelInfo[index]).MentionCount = 0
+				(*channelInfo[index]).MsgCount = 0
 			} else {
 				// TODO improve performance
 				var userMsgCount int64
+				var userMentionsCount int64
 				var err error
 				userMsgCountQuery := fmt.Sprintf("SELECT count(*) FROM Posts WHERE ChannelId=:channelId%d AND CreateAt > :lastViewed%d", index, index)
+				userMentionsCountQuery := fmt.Sprintf("SELECT count(*) FROM Mentions WHERE ChannelId=:channelId%d AND CreateAt > :lastViewed%d", index, index)
 				if userMsgCount, err = s.GetMaster().SelectInt(userMsgCountQuery, props); err != nil {
 					result.Err = model.NewAppError("SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
 					return
 				}
+				if userMentionsCount, err = s.GetMaster().SelectInt(userMentionsCountQuery, props); err != nil {
+					result.Err = model.NewAppError("SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
+					return
+				}
 				props["msgCount"+strconv.Itoa(index)] = t.TotalMsgCount - userMsgCount
+				props["mentionsCount"+strconv.Itoa(index)] = userMentionsCount
 				msgCountQuery += fmt.Sprintf("WHEN :channelId%d THEN :msgCount%d ", index, index)
+
+				(*channelInfo[index]).MentionCount = userMentionsCount
+				(*channelInfo[index]).MsgCount = userMsgCount
 			}
+			mentionsCountQuery += fmt.Sprintf("WHEN :channelId%d THEN :mentionsCount%d ", index, index)
 			// :END
 		}
 
@@ -1454,7 +1474,7 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			updateQuery = `UPDATE
 				ChannelMembers
 			SET
-			    MentionCount = 0,
+			    MentionCount = CAST(CASE ChannelId ` + mentionsCountQuery + ` END AS BIGINT),
 			    MsgCount = CAST(CASE ChannelId ` + msgCountQuery + ` END AS BIGINT),
 			    LastViewedAt = CAST(CASE ChannelId ` + lastViewedQuery + ` END AS BIGINT),
 			    LastUpdateAt = CAST(CASE ChannelId ` + lastViewedQuery + ` END AS BIGINT)
@@ -1465,7 +1485,7 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			updateQuery = `UPDATE
 				ChannelMembers
 			SET
-			    MentionCount = 0,
+			    MentionCount = CASE ChannelId ` + mentionsCountQuery + ` END,
 			    MsgCount = CASE ChannelId ` + msgCountQuery + ` END,
 			    LastViewedAt = CASE ChannelId ` + lastViewedQuery + ` END,
 			    LastUpdateAt = CASE ChannelId ` + lastViewedQuery + ` END
@@ -1476,12 +1496,13 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 
 		props["UserId"] = userId
 
-		if _, err := s.GetMaster().Exec(updateQuery, props); err != nil {
+		_, err := s.GetMaster().Exec(updateQuery, props)
+		if err != nil {
 			result.Err = model.NewAppError("SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		result.Data = times
+		result.Data = channelInfo
 	})
 }
 

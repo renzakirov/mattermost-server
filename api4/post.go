@@ -32,6 +32,7 @@ func (api *API) InitPost() {
 	// DOGEZER RZ:
 	api.BaseRoutes.Post.Handle("/thread/view", api.ApiSessionRequired(viewPostThread)).Methods("POST")
 	api.BaseRoutes.UnreadsInThreadForUser.Handle("", api.ApiSessionRequired(getThreadUnreads)).Methods("GET")
+	api.BaseRoutes.PostsForUser.Handle("/last/{limit:[0-9]+}", api.ApiSessionRequired(getNLastPosts)).Methods("GET")
 }
 
 func createPost(c *Context, w http.ResponseWriter, r *http.Request) {

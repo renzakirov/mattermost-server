@@ -30,6 +30,11 @@ type ChannelViewResponse struct {
 	LastViewedAtTimes map[string]int64 `json:"last_viewed_at_times"`
 }
 
+// type ChannelViewResponse struct {
+// 	Status string        `json:"status"`
+// 	Info   []ChannelInfo `json:"channel_info"`
+// }
+
 func (o *ChannelViewResponse) ToJson() string {
 	b, _ := json.Marshal(o)
 	return string(b)
