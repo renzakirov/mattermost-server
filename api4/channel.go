@@ -15,6 +15,10 @@ func (api *API) InitChannel() {
 	api.BaseRoutes.Channels.Handle("/direct", api.ApiSessionRequired(createDirectChannel)).Methods("POST")
 	api.BaseRoutes.Channels.Handle("/group", api.ApiSessionRequired(createGroupChannel)).Methods("POST")
 	api.BaseRoutes.Channels.Handle("/members/{user_id:[A-Za-z0-9]+}/view", api.ApiSessionRequired(viewChannel)).Methods("POST")
+
+	// DOGEZER RZ:
+	api.BaseRoutes.Channels.Handle("/{channel_id:[A-Za-z0-9]+}/view", api.ApiSessionRequired(dViewChannel)).Methods("POST")
+
 	api.BaseRoutes.Channels.Handle("/{channel_id:[A-Za-z0-9]+}/scheme", api.ApiSessionRequired(updateChannelScheme)).Methods("PUT")
 
 	api.BaseRoutes.ChannelsForTeam.Handle("", api.ApiSessionRequired(getPublicChannelsForTeam)).Methods("GET")
@@ -866,6 +870,40 @@ func getChannelMembersForUser(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	w.Write([]byte(members.ToJson()))
+}
+
+// DOGEZER RZ:
+// TODO добавить в ответ unreads(?)
+func dViewChannel(c *Context, w http.ResponseWriter, r *http.Request) {
+	userId := c.Session.UserId
+
+	c.RequireChannelId()
+	if c.Err != nil {
+		return
+	}
+
+	channelInfo := model.ChannelInfoFromJson(r.Body)
+	if channelInfo == nil {
+		c.SetInvalidParam("channel_view")
+		return
+	}
+
+	info, err := c.App.DChannelView(channelInfo, userId)
+
+	if err != nil {
+		c.Err = err
+		return
+	}
+	c.App.UpdateLastActivityAtIfNeeded(c.Session)
+
+	lastViewedAtTimes := make(map[string]int64, 1)
+	lastViewedAtTimes[info.ChannelId] = info.LastViewedAt
+
+	resp := &model.ChannelViewResponse{
+		Status:            "OK",
+		LastViewedAtTimes: lastViewedAtTimes,
+	}
+	w.Write([]byte(resp.ToJson()))
 }
 
 func viewChannel(c *Context, w http.ResponseWriter, r *http.Request) {

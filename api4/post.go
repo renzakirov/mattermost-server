@@ -121,6 +121,9 @@ func viewPostThread(c *Context, w http.ResponseWriter, r *http.Request) {
 	unread.UserId = c.Session.UserId
 
 	fmt.Println("-----------api.Post -> viewPostThread -> unread(after) = ", unread)
+
+	// DOGEZER TODO добавить проверку тред или канал (по root_id) и вызвывать нужный метод
+	// в метод добавить проверку если параметр (create_at) меньше текущего значения (last_viewed_at) то ничео не делать (вернуть текущие значения unreads...)
 	rp, err := c.App.ViewPost(unread)
 	if err != nil {
 		c.Err = err

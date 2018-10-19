@@ -186,7 +186,11 @@ func (s SqlChannelStore) GetChannelUnreads(channelId, userId string) store.Store
 		var channelUnread model.ChannelUnread
 		err := s.GetReplica().SelectOne(&channelUnread,
 			`SELECT
-				Channels.TeamId TeamId, Channels.Id ChannelId, (Channels.TotalMsgCount - ChannelMembers.MsgCount) MsgCount, ChannelMembers.MentionCount MentionCount, ChannelMembers.NotifyProps NotifyProps
+				Channels.TeamId TeamId, 
+				Channels.Id ChannelId, 
+				(Channels.TotalMsgCount - ChannelMembers.MsgCount) MsgCount, 
+				ChannelMembers.MentionCount MentionCount, 
+				ChannelMembers.NotifyProps NotifyProps
 			FROM
 				Channels, ChannelMembers
 			WHERE
@@ -296,5 +300,95 @@ func (s SqlChannelStore) GetThreadUnreads(threadId, userId string) store.StoreCh
 		fmt.Println("-- -> err = ", err)
 		threadUnreads.MentionCount = mCount
 		result.Data = &threadUnreads
+	})
+}
+
+func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId string) store.StoreChannel {
+	return store.Do(func(result *store.StoreResult) {
+		fmt.Println("DChannelView -> ", channelInfo)
+
+		// достать last_viewed_at из channelmembers
+		// если больше - то сделать
+		// меньше или равен достать последние значения
+
+		// var lastV []struct {
+		// 	LastViewedAt int64
+		// }
+
+		var LastViewedAt int64
+		props := make(map[string]interface{})
+
+		props["ChannelId"] = channelInfo.ChannelId
+		props["UserId"] = userId
+
+		query := `
+			SELECT lastviewedat FROM ChannelMembers 
+			WHERE userid = :UserId and
+			channelid = :ChannelId
+		`
+		if err := s.GetMaster().SelectOne(&LastViewedAt, query, props); err != nil {
+			result.Err = model.NewAppError("2 SqlChannelStore.DChannelView", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_id="+channelInfo.ChannelId+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if LastViewedAt > channelInfo.LastViewedAt {
+			channelInfo.MsgCount = 5
+			channelInfo.MentionCount = 7
+			channelInfo.LastViewedAt = LastViewedAt
+		} else {
+			props["LastAt"] = channelInfo.LastViewedAt
+			props["UserBehalf"] = "{\"on_behalf\":\"" + userId + "\"}"
+			var msgCount int64
+			err := s.GetReplica().SelectOne(&msgCount,
+				`
+					select
+						count(*)
+					from posts
+					where channelid = :ChannelId and
+					rootid = '' and
+					createat > :LastAt and
+					userid != :UserId and
+					type not like 'system%' and 
+					type not like '%system%' and 
+					(type != 'custom_dogezer_behalf' or props != :UserBehalf)
+				`,
+				props)
+
+			if err != nil {
+				return
+			}
+			var mentionCount int64
+			err = s.GetReplica().SelectOne(&mentionCount,
+				`
+					select
+						count(*)
+					from mentions
+					where channelid = :ChannelId and
+					rootid = '' and
+					createat > :LastAt and
+					userid = :UserId 
+				`,
+				props)
+			if err != nil {
+				return
+			}
+
+			props["MsgCount"] = msgCount
+			props["MentionCount"] = mentionCount
+
+			r, err := s.GetMaster().Exec(`
+			UPDATE channelmemebers 
+			SET 
+				LastViewedAt = :LastViewedAt, 
+				msgcount = :MsgCount, 
+				mentioncount = :MentionCount 
+				lastupdateat = :LastViewedAt
+			WHERE 
+				ChannelId = :ChannelId AND 
+				UserId = :UserId`,
+				props)
+		}
+
+		result.Data = &channelInfo
 	})
 }

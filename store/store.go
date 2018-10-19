@@ -164,6 +164,7 @@ type ChannelStore interface {
 
 	// DOGEZER RZ:
 	UpdateLastViewedAt(channelIds []string, lastViewedAt []*int64, userId string) StoreChannel
+	DChannelView(channelInfo *model.ChannelInfo, userId string) StoreChannel
 
 	IncrementMentionCount(channelId string, userId string) StoreChannel
 	AnalyticsTypeCount(teamId string, channelType string) StoreChannel

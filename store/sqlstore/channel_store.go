@@ -1376,7 +1376,7 @@ func (s SqlChannelStore) PermanentDeleteMembersByUser(userId string) store.Store
 func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts []*int64, userId string) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
 		props := make(map[string]interface{})
-
+		props["UserId"] = userId
 		channelInfo := make([]*model.ChannelInfo, 0)
 
 		updateIdQuery := ""
@@ -1415,6 +1415,22 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			return
 		}
 
+		var lastV []struct {
+			LastViewedAt int64
+			ChannelId    string
+		}
+		selectQueryChannelsMember := "SELECT channelid, lastviewedat FROM ChannelMembers WHERE " + updateIdQuery + " and userid = :UserId"
+		fmt.Println(selectQueryChannelsMember)
+		if _, err := s.GetMaster().Select(&lastV, selectQueryChannelsMember, props); err != nil {
+			result.Err = model.NewAppError("2 SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		lastTimes := map[string]int64{}
+		for _, channelM := range lastV {
+			lastTimes[channelM.ChannelId] = channelM.LastViewedAt
+		}
+
 		times := map[string]int64{}
 		msgCountQuery := ""
 		mentionsCountQuery := ""
@@ -1434,6 +1450,7 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			}
 
 			props["channelId"+strconv.Itoa(index)] = t.Id
+			props["lastViewed"+strconv.Itoa(index)] = lastTimes[t.Id]
 
 			if !ok {
 				props["mentionsCount"+strconv.Itoa(index)] = 0
@@ -1447,8 +1464,12 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 				var userMsgCount int64
 				var userMentionsCount int64
 				var err error
-				userMsgCountQuery := fmt.Sprintf("SELECT count(*) FROM Posts WHERE ChannelId=:channelId%d AND CreateAt > :lastViewed%d", index, index)
+				userMsgCountQueryStr1 := "SELECT count(*) FROM Posts WHERE ChannelId=:channelId%d AND CreateAt > :lastViewed%d AND "
+				userMsgCountQueryStr2 := "type not like '%system%' and type not like 'system%'"
+
+				userMsgCountQuery := fmt.Sprintf(userMsgCountQueryStr1, index, index) + userMsgCountQueryStr2
 				userMentionsCountQuery := fmt.Sprintf("SELECT count(*) FROM Mentions WHERE ChannelId=:channelId%d AND CreateAt > :lastViewed%d", index, index)
+				fmt.Println("userMsgCountQuery = ", userMsgCountQuery)
 				if userMsgCount, err = s.GetMaster().SelectInt(userMsgCountQuery, props); err != nil {
 					result.Err = model.NewAppError("SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
 					return
@@ -1462,7 +1483,7 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 				msgCountQuery += fmt.Sprintf("WHEN :channelId%d THEN :msgCount%d ", index, index)
 
 				(*channelInfo[index]).MentionCount = userMentionsCount
-				(*channelInfo[index]).MsgCount = userMsgCount
+				(*channelInfo[index]).MsgCount = t.TotalMsgCount - userMsgCount
 			}
 			mentionsCountQuery += fmt.Sprintf("WHEN :channelId%d THEN :mentionsCount%d ", index, index)
 			// :END
@@ -1501,7 +1522,6 @@ func (s SqlChannelStore) UpdateLastViewedAt(channelIds []string, lastViewedAts [
 			result.Err = model.NewAppError("SqlChannelStore.UpdateLastViewedAt", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_ids="+strings.Join(channelIds, ",")+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		result.Data = channelInfo
 	})
 }

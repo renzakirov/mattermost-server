@@ -1861,6 +1861,18 @@ func (c *Client4) GetChannelMembersForUser(userId, teamId, etag string) (*Channe
 	}
 }
 
+// DOGEZER RZ:
+func (c *Client4) DChannelView(channelInfo *ChannelInfo, userId string) (*ChannelInfo, *Response) {
+
+	if r, err := c.DoApiGet(c.GetChannelsRoute()+"/view", ""); err != nil {
+		return nil, BuildErrorResponse(r, err)
+	} else {
+		defer closeBody(r)
+		return ChannelInfoFromJson(r.Body), BuildResponse(r)
+	}
+
+}
+
 // ViewChannel performs a view action for a user. Synonymous with switching channels or marking channels as read by a user.
 func (c *Client4) ViewChannel(userId string, view *ChannelView) (*ChannelViewResponse, *Response) {
 	url := fmt.Sprintf(c.GetChannelsRoute()+"/members/%v/view", userId)
