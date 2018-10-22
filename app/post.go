@@ -82,7 +82,11 @@ func (a *App) CreatePostAsUser(post *model.Post) (*model.Post, *model.AppError) 
 		if _, ok := post.Props["from_webhook"]; !ok {
 
 			// DOGEZER RZ:
-			if result := <-a.Srv.Store.Channel().UpdateLastViewedAt([]string{post.ChannelId}, nil, post.UserId); result.Err != nil {
+			var channelInfo = model.ChannelInfo{
+				ChannelId:  post.ChannelId,
+				LastPostAt: post.CreateAt,
+			}
+			if result := <-a.Srv.Store.Channel().DChannelView(&channelInfo, post.UserId); result.Err != nil {
 				mlog.Error(fmt.Sprintf("Encountered error updating last viewed, channel_id=%s, user_id=%s, err=%v", post.ChannelId, post.UserId, result.Err))
 			}
 
@@ -95,6 +99,7 @@ func (a *App) CreatePostAsUser(post *model.Post) (*model.Post, *model.AppError) 
 				message.Add("msg_count", 0)
 				message.Add("mention_count", 0)
 				message.Add("last_viewed_at", post.CreateAt)
+				message.Add("last_post_at", post.CreateAt)
 				a.Publish(message)
 			}
 		}

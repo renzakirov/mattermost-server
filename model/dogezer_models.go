@@ -192,6 +192,7 @@ type ChannelInfo struct {
 	MsgCount     int64  `json:"msg_count"`
 	MentionCount int64  `json:"mention_count"`
 	LastViewedAt int64  `json:"last_viewed_at"`
+	LastPostAt   int64  `json:"last_post_at"`
 }
 
 func (ci *ChannelInfo) ToJson() string {

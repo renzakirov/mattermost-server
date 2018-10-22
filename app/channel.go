@@ -1497,23 +1497,14 @@ func (a *App) SetActiveChannel(userId string, channelId string) *model.AppError 
 }
 
 func (a *App) UpdateChannelLastViewedAt(channelIds []string, userId string) *model.AppError {
-
-	// DOGEZER RZ:
-	// times := map[string]int64{}
-	var info []*model.ChannelInfo
-	if result := <-a.Srv.Store.Channel().UpdateLastViewedAt(channelIds, nil, userId); result.Err != nil {
+	if result := <-a.Srv.Store.Channel().UpdateLastViewedAt(channelIds, userId); result.Err != nil {
 		return result.Err
-	} else {
-		info = result.Data.([]*model.ChannelInfo)
 	}
 
 	if *a.Config().ServiceSettings.EnableChannelViewedMessages {
-		for index := range channelIds {
+		for _, channelId := range channelIds {
 			message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_CHANNEL_VIEWED, "", "", userId, nil)
-			message.Add("channel_id", info[index].ChannelId)
-			message.Add("msg_count", info[index].MsgCount)
-			message.Add("mention_count", info[index].MentionCount)
-			message.Add("last_viewed_at", info[index].LastViewedAt)
+			message.Add("channel_id", channelId)
 			a.Publish(message)
 		}
 	}
@@ -1579,7 +1570,7 @@ func (a *App) ViewChannel(view *model.ChannelView, userId string, clearPushNotif
 		return nil, nil
 	}
 
-	uchan := a.Srv.Store.Channel().UpdateLastViewedAt(channelIds, lastViewedAts, userId)
+	uchan := a.Srv.Store.Channel().UpdateLastViewedAt(channelIds, userId)
 
 	if pchan != nil {
 		if result := <-pchan; result.Err != nil {

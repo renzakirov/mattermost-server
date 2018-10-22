@@ -875,6 +875,7 @@ func getChannelMembersForUser(c *Context, w http.ResponseWriter, r *http.Request
 // DOGEZER RZ:
 // TODO добавить в ответ unreads(?)
 func dViewChannel(c *Context, w http.ResponseWriter, r *http.Request) {
+
 	userId := c.Session.UserId
 
 	c.RequireChannelId()

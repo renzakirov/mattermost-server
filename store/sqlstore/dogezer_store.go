@@ -307,36 +307,67 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 	return store.Do(func(result *store.StoreResult) {
 		fmt.Println("DChannelView -> ", channelInfo)
 
-		// достать last_viewed_at из channelmembers
-		// если больше - то сделать
-		// меньше или равен достать последние значения
+		var currentInfo model.ChannelInfo
 
-		// var lastV []struct {
-		// 	LastViewedAt int64
-		// }
-
-		var LastViewedAt int64
 		props := make(map[string]interface{})
 
 		props["ChannelId"] = channelInfo.ChannelId
 		props["UserId"] = userId
 
+		if channelInfo.LastPostAt > 0 {
+			// when user post
+			props["LastPostAt"] = channelInfo.LastPostAt
+			_, err := s.GetMaster().Exec(`
+				UPDATE channelmembers 
+				SET 
+					LastViewedAt = :LastPostAt, 
+					msgcount = 0, 
+					mentioncount = 0,
+					LastPostAt = :LastPostAt
+				WHERE 
+					ChannelId = :ChannelId AND 
+					UserId = :UserId
+			`, props)
+
+			if err != nil {
+				result.Err = model.NewAppError("SqlChannelStore.DChannelView", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			channelInfo.MsgCount = 0
+			channelInfo.MentionCount = 0
+			channelInfo.LastViewedAt = channelInfo.LastViewedAt
+			result.Data = &channelInfo
+			return
+		}
+
 		query := `
-			SELECT lastviewedat FROM ChannelMembers 
-			WHERE userid = :UserId and
-			channelid = :ChannelId
+			SELECT 
+				cm.lastviewedat, 
+				cm.msgcount, 
+				cm.mentioncount, 
+				c.lastpostat
+			FROM ChannelMembers as cm, channels as c 
+			WHERE 
+				userid = :UserId and
+				channelid = :ChannelId and 
+				c.id = :ChannelId
 		`
-		if err := s.GetMaster().SelectOne(&LastViewedAt, query, props); err != nil {
+		if err := s.GetMaster().SelectOne(&currentInfo, query, props); err != nil {
 			result.Err = model.NewAppError("2 SqlChannelStore.DChannelView", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_id="+channelInfo.ChannelId+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if LastViewedAt > channelInfo.LastViewedAt {
-			channelInfo.MsgCount = 5
-			channelInfo.MentionCount = 7
-			channelInfo.LastViewedAt = LastViewedAt
-		} else {
-			props["LastAt"] = channelInfo.LastViewedAt
+		if channelInfo.LastViewedAt == 0 {
+			channelInfo.LastViewedAt = currentInfo.LastPostAt
+		}
+
+		if channelInfo.LastViewedAt <= currentInfo.LastViewedAt {
+			channelInfo.MsgCount = currentInfo.MsgCount
+			channelInfo.MentionCount = currentInfo.MentionCount
+			channelInfo.LastViewedAt = currentInfo.LastViewedAt
+		} else if channelInfo.LastViewedAt < currentInfo.LastPostAt {
+			props["LastViewedAt"] = channelInfo.LastViewedAt
 			props["UserBehalf"] = "{\"on_behalf\":\"" + userId + "\"}"
 			var msgCount int64
 			err := s.GetReplica().SelectOne(&msgCount,
@@ -346,7 +377,7 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 					from posts
 					where channelid = :ChannelId and
 					rootid = '' and
-					createat > :LastAt and
+					createat > :LastViewedAt and
 					userid != :UserId and
 					type not like 'system%' and 
 					type not like '%system%' and 
@@ -365,28 +396,59 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 					from mentions
 					where channelid = :ChannelId and
 					rootid = '' and
-					createat > :LastAt and
+					createat > :LastViewedAt and
 					userid = :UserId 
 				`,
 				props)
 			if err != nil {
+
 				return
 			}
 
 			props["MsgCount"] = msgCount
 			props["MentionCount"] = mentionCount
 
-			r, err := s.GetMaster().Exec(`
-			UPDATE channelmemebers 
-			SET 
-				LastViewedAt = :LastViewedAt, 
-				msgcount = :MsgCount, 
-				mentioncount = :MentionCount 
-				lastupdateat = :LastViewedAt
-			WHERE 
-				ChannelId = :ChannelId AND 
-				UserId = :UserId`,
-				props)
+			_, err = s.GetMaster().Exec(`
+				UPDATE channelmembers 
+				SET 
+					LastViewedAt = :LastViewedAt, 
+					msgcount = :MsgCount, 
+					mentioncount = :MentionCount
+				WHERE 
+					ChannelId = :ChannelId AND 
+					UserId = :UserId
+			`, props)
+
+			if err != nil {
+				result.Err = model.NewAppError("SqlChannelStore.DChannelView", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			channelInfo.MsgCount = msgCount
+			channelInfo.MentionCount = mentionCount
+			channelInfo.LastViewedAt = channelInfo.LastViewedAt
+		} else { // if channelInfo.LastViewedAt >= currentInfo.LastPostAt {
+			props["LastViewedAt"] = channelInfo.LastViewedAt
+			_, err := s.GetMaster().Exec(`
+				UPDATE channelmembers 
+				SET 
+					LastViewedAt = :LastViewedAt, 
+					msgcount = 0, 
+					mentioncount = 0
+				WHERE 
+					ChannelId = :ChannelId AND 
+					UserId = :UserId
+			`, props)
+
+			if err != nil {
+				result.Err = model.NewAppError("SqlChannelStore.DChannelView", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			channelInfo.MsgCount = 0
+			channelInfo.MentionCount = 0
+			channelInfo.LastViewedAt = channelInfo.LastViewedAt
+
 		}
 
 		result.Data = &channelInfo

@@ -163,7 +163,7 @@ type ChannelStore interface {
 	PermanentDeleteMembersByChannel(channelId string) StoreChannel
 
 	// DOGEZER RZ:
-	UpdateLastViewedAt(channelIds []string, lastViewedAt []*int64, userId string) StoreChannel
+	UpdateLastViewedAt(channelIds []string, userId string) StoreChannel
 	DChannelView(channelInfo *model.ChannelInfo, userId string) StoreChannel
 
 	IncrementMentionCount(channelId string, userId string) StoreChannel
