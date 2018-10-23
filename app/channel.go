@@ -852,11 +852,43 @@ func (a *App) AddChannelMember(userId string, channel *model.Channel, userReques
 		})
 	}
 
-	if userRequestor != nil {
-		a.UpdateChannelLastViewedAt([]string{channel.Id}, userRequestor.Id)
+	// DOGEZER RZ:
+	info, err := a.UpdateChannelMembers(channel.Id, userId)
+	if err != nil {
+		return nil, err
+	}
+	cm.LastViewedAt = info.LastViewedAt
+
+	// DOGEZER RZ: comment next
+	/*
+		if userRequestor != nil {
+			a.UpdateChannelLastViewedAt([]string{channel.Id}, userRequestor.Id)
+		}
+	*/
+	return cm, nil
+}
+
+func (a *App) UpdateChannelMembers(channelId, userId string) (*model.ChannelInfo, *model.AppError) {
+
+	var channelInfo = model.ChannelInfo{
+		ChannelId:    channelId,
+		LastViewedAt: model.GetMillis(),
 	}
 
-	return cm, nil
+	if result := <-a.Srv.Store.Channel().DChannelViewWhenAddMember(&channelInfo, userId); result.Err != nil {
+		return nil, result.Err
+	}
+
+	if *a.Config().ServiceSettings.EnableChannelViewedMessages {
+		message := model.NewWebSocketEvent(model.WEBSOCKET_EVENT_CHANNEL_VIEWED, "", "", userId, nil)
+		message.Add("channel_id", channelInfo.ChannelId)
+		message.Add("msg_count", channelInfo.MsgCount)
+		message.Add("mention_count", channelInfo.MentionCount)
+		message.Add("last_viewed_at", channelInfo.LastViewedAt)
+		a.Publish(message)
+	}
+
+	return &channelInfo, nil
 }
 
 func (a *App) AddDirectChannels(teamId string, user *model.User) *model.AppError {

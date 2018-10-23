@@ -94,10 +94,6 @@ func (a *App) StartServer() error {
 	allowCredentials := *a.Config().ServiceSettings.CorsAllowCredentials
 	debug := *a.Config().ServiceSettings.CorsDebug
 
-	mlog.Info(fmt.Sprintf(" *** AllowCorsFrom = %s", allowedOrigins))
-	mlog.Info(fmt.Sprintf(" *** exposedCorsHeaders = %s", exposedCorsHeaders))
-	mlog.Info(fmt.Sprintf(" *** allowCredentials = %s", allowCredentials))
-
 	if allowedOrigins != "" {
 		// todo
 		corsWrapper := cors.New(cors.Options{
@@ -257,7 +253,6 @@ func (a *App) StopServer() {
 
 func (a *App) OriginChecker() func(*http.Request) bool {
 	allowed := *a.Config().ServiceSettings.AllowCorsFrom
-	mlog.Info(fmt.Sprintf(" *** AllowCorsFrom = %s", allowed))
 
 	if allowed != "" {
 		if allowed != "*" {

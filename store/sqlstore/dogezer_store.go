@@ -303,6 +303,40 @@ func (s SqlChannelStore) GetThreadUnreads(threadId, userId string) store.StoreCh
 	})
 }
 
+func (s SqlChannelStore) DChannelViewWhenAddMember(channelInfo *model.ChannelInfo, userId string) store.StoreChannel {
+	return store.Do(func(result *store.StoreResult) {
+		fmt.Println("---- DChannelViewWhenAddMember -> ", channelInfo, userId)
+
+		props := make(map[string]interface{})
+
+		props["ChannelId"] = channelInfo.ChannelId
+		props["UserId"] = userId
+		props["LastViewedAt"] = channelInfo.LastViewedAt
+
+		_, err := s.GetMaster().Exec(`
+				UPDATE channelmembers 
+				SET 
+					LastViewedAt = :LastViewedAt, 
+					msgcount = 0, 
+					mentioncount = 0
+				WHERE 
+					ChannelId = :ChannelId AND 
+					UserId = :UserId
+			`, props)
+
+		if err != nil {
+			result.Err = model.NewAppError("SqlChannelStore.DChannelViewWhenAddMember", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		channelInfo.MsgCount = 0
+		channelInfo.MentionCount = 0
+		channelInfo.LastViewedAt = channelInfo.LastViewedAt
+		result.Data = &channelInfo
+		return
+	})
+}
+
 func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId string) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
 		fmt.Println("DChannelView -> ", channelInfo)
@@ -322,15 +356,14 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 				SET 
 					LastViewedAt = :LastPostAt, 
 					msgcount = 0, 
-					mentioncount = 0,
-					LastPostAt = :LastPostAt
+					mentioncount = 0
 				WHERE 
 					ChannelId = :ChannelId AND 
 					UserId = :UserId
 			`, props)
 
 			if err != nil {
-				result.Err = model.NewAppError("SqlChannelStore.DChannelView", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+				result.Err = model.NewAppError("SqlChannelStore.DChannelView-1", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -354,7 +387,7 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 				c.id = :ChannelId
 		`
 		if err := s.GetMaster().SelectOne(&currentInfo, query, props); err != nil {
-			result.Err = model.NewAppError("2 SqlChannelStore.DChannelView", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_id="+channelInfo.ChannelId+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
+			result.Err = model.NewAppError("2 SqlChannelStore.DChannelView-2", "store.sql_channel.update_last_viewed_at.app_error", nil, "channel_id="+channelInfo.ChannelId+", user_id="+userId+", "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -420,7 +453,7 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 			`, props)
 
 			if err != nil {
-				result.Err = model.NewAppError("SqlChannelStore.DChannelView", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+				result.Err = model.NewAppError("SqlChannelStore.DChannelView-3", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -441,7 +474,7 @@ func (s SqlChannelStore) DChannelView(channelInfo *model.ChannelInfo, userId str
 			`, props)
 
 			if err != nil {
-				result.Err = model.NewAppError("SqlChannelStore.DChannelView", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
+				result.Err = model.NewAppError("SqlChannelStore.DChannelView-4", "store.sql_channel.view.channel.app_error", nil, "id="+channelInfo.ChannelId+", err="+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
